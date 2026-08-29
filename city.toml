@@ -34,3 +34,7 @@ flag_args = ["--provider", "opencode-go", "--model", "deepseek-v4-pro"]
 # 0 disables retention; use "168h" for 7 days.
 # "7d" is not a valid Go duration.
 # retention_ttl = "0"
+
+[[rigs]]
+name = "scratch-proj"
+default_branch = "main"
