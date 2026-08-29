@@ -1,0 +1,17 @@
+# Gas City runtime state (machine-local; never commit)
+.gc/
+.beads/*
+!.beads/identity.toml
+hooks/
+
+# Pi harness extensions installed into agent workdirs
+.pi/
+
+# Scratch and test cities/projects
+scratch/
+tmp/
+/tests/work/
+
+# Local editor/OS noise
+*.swp
+.DS_Store
