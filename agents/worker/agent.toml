@@ -5,7 +5,11 @@ option_defaults = { model = "deepseek-v4-flash" }
 scope = "rig"
 dir = "scratch-proj"
 min_active_sessions = 0
-max_active_sessions = 8
+# max_active_sessions capped at 1 until automatic worktree isolation is
+# implemented and validated. Multiple concurrent writing Workers inside
+# one shared checkout would race on the same files.
+# Raised after worktree isolation is validated.
+max_active_sessions = 1
 wake_mode = "fresh"
 
 [env]
