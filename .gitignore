@@ -4,6 +4,13 @@
 !.beads/identity.toml
 hooks/
 
+# Beads / Dolt runtime artifacts
+.dolt/
+.dolt-backup/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+
 # Pi harness extensions installed into agent workdirs
 .pi/
 
