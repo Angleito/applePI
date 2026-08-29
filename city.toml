@@ -4,8 +4,9 @@ provider = "pi"
 [agent_defaults]
 provider = "pi"
 
-[beads]
-provider = "file"
+# Beads provider: unset = Gas City default "bd" (Dolt-backed).
+# Do not set provider = "file": the file store cannot claim routed work
+# (gastownhall/gascity#1761); all durable work queries require bd.
 
 # Role-based model choices on top of the builtin pi harness.
 # Changing a model here is configuration, not architecture.
