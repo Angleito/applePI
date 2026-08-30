@@ -43,7 +43,19 @@ The task description must contain an `REPORT_TO` line with your alias so the Wor
 
 Workers report via `gc session submit <your-alias> "<completion report>" --intent follow_up`. Review the report, the task, the diff, and the tests. Then choose:
 
-- ACCEPT — integrate the accepted commit (cherry-pick or merge into the project branch yourself).
+- ACCEPT — if the task bead is still open, close it with the work-record
+  outcome (the Worker usually closes it with `gc.work_outcome=shipped`
+  already; closing again is harmless). Then integrate the accepted commit
+  (cherry-pick or merge into the project branch yourself):
+
+  ```bash
+  gc bd update <task-id> \
+    --set-metadata gc.outcome=pass \
+    --set-metadata gc.work_outcome=shipped \
+    --status=closed \
+    --notes "ACCEPTED: <one-line verdict>."
+  ```
+
 - FIX REQUIRED — create a new durable task (or route the same task back) describing the fix. Worker identity is unimportant; task correctness is important.
 - BLOCKED — record the blocker, resolve it, or escalate.
 - ESCALATE — a decision exceeds your authority.

@@ -98,6 +98,18 @@ gc hook --claim --json
 Beads are durable; sessions are disposable. A Worker crash leaves the task
 recoverable. Manager/Executive sessions resume from Gas City session identity.
 
+### Task bead closure (known behavior)
+
+The Worker closes its task bead with the canonical work-record contract
+(`gc.work_outcome=shipped`, ADR-0009 — same as the `mol-do-work` formula);
+the Manager closes it on ACCEPT if still open. Both prompts carry the exact
+command. Depending on the model, the Worker may instead leave the bead
+`in_progress` "awaiting review" — the durable work record (work_dir, commit)
+is still complete and the Manager reviews it. Until a task bead is closed,
+`gc hook --claim` keeps returning it as the session's existing assignment,
+so new work waits: close the bead (Worker, Manager, or `gc bd close <id>`)
+to unblock. This is model-variant behavior, not a Gas City defect.
+
 ## Concurrency defaults
 
 ```text
