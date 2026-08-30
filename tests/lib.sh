@@ -49,7 +49,7 @@ gc_test_cleanup() {
     set +e
     if [ -n "${CITY_DIR:-}" ] && [ -d "${CITY_DIR}/.gc" ]; then
         (cd "${CITY_DIR}" && gc stop >/dev/null 2>&1)
-        (cd "${CITY_DIR}" && gc unregister >/dev/null 2>&1)
+        (cd "${CITY_DIR}" && gc unregister "${CITY_DIR}" >/dev/null 2>&1)
     fi
     if [ -n "${WORK_DIR:-}" ]; then
         if [ "${GC_TEST_KEEP:-0}" = "1" ]; then
@@ -126,19 +126,23 @@ gc_test_new_manager() {
     ) || fail "${alias} creation failed"
 }
 
+gc_test_manager_target() {
+    printf 'scratch-proj/applepi-roles.%s' "$1"
+}
+
 gc_test_brief_manager() { # submit the workstream brief, retrying until accepted
     local alias="$1" brief="$2"
     (
         cd "${CITY_DIR}"
-        local i=0
+        local i=0 output=""
         while [ "${i}" -lt 12 ]; do
-            if gc session submit "${alias}" "${brief}" --intent follow_up >/dev/null 2>&1; then
+            if output="$(gc session submit "$(gc_test_manager_target "${alias}")" "${brief}" --intent follow_up 2>&1)"; then
                 return 0
             fi
             sleep 10
             i=$((i + 1))
         done
-        fail "brief not accepted by ${alias}"
+        fail "brief not accepted by ${alias}: ${output}"
     )
 }
 
@@ -170,5 +174,5 @@ gc_test_worker_in_rig() { # waits for a worker session bound to the rig
 
 gc_test_manager_reviewed() { # true once the manager transcript engages with a task
     local bead_id="$1"
-    (cd "${CITY_DIR}" && gc session peek manager-test 2>/dev/null | grep -q "${bead_id}")
+    (cd "${CITY_DIR}" && gc session peek "$(gc_test_manager_target manager-test)" 2>/dev/null | grep -q "${bead_id}")
 }

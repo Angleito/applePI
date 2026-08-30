@@ -23,10 +23,12 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 TASK_TITLE="manager recovery probe"
+MANAGER_ALIAS="manager-test"
+MANAGER_TARGET="$(gc_test_manager_target "${MANAGER_ALIAS}")"
 TASK_DESC="Create MGR_TEST.txt containing exactly: applePI manager recovery probe
 
 REPORT_TO:
-manager-test
+${MANAGER_TARGET}
 
 OBJECTIVE:
 Manager recovery validation file.
@@ -47,8 +49,8 @@ gc_test_prereqs
 gc_test_boot
 
 step "create manager-test and give it a workstream brief"
-gc_test_new_manager "manager-test"
-gc_test_brief_manager "manager-test" "You own a trivial Phase 0 test workstream. Scope: the scratch-proj repository. Your only deliverable: when a Worker task arrives, review it and report a short compressed summary to executive. Do not implement code yourself."
+gc_test_new_manager "${MANAGER_ALIAS}"
+gc_test_brief_manager "${MANAGER_ALIAS}" "You own a trivial Phase 0 test workstream. Scope: the scratch-proj repository. Your only deliverable: when a Worker task arrives, review it and report a short compressed summary to executive. Do not implement code yourself."
 
 step "route Worker task (durable work under the Manager)"
 BEAD_ID="$(gc_test_sling "${TASK_TITLE}" "${TASK_DESC}")"
@@ -85,7 +87,7 @@ step "reconciler restarts the Manager session with transcript intact"
 ) || fail "manager session did not restart"
 (
     cd "${CITY_DIR}"
-    wait_for 180 "manager transcript retains workstream context" bash -c "gc session peek manager-test 2>/dev/null | grep -q '${BEAD_ID}'"
+    wait_for 180 "manager transcript retains workstream context" bash -c "gc session peek '${MANAGER_TARGET}' 2>/dev/null | grep -q '${BEAD_ID}'"
 ) || fail "manager transcript lost the workstream context"
 
 step "workstream reconstructable from durable state (bead is source of truth)"

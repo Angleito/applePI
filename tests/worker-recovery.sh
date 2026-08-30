@@ -22,10 +22,11 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 TASK_TITLE="worker recovery probe"
+MANAGER_TARGET="$(gc_test_manager_target manager-test)"
 TASK_DESC="Create REC_TEST.txt containing exactly: applePI recovery probe
 
 REPORT_TO:
-manager-test
+${MANAGER_TARGET}
 
 OBJECTIVE:
 Recovery validation file.
