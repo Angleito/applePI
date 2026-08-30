@@ -32,10 +32,7 @@ gc_test_boot
 
 step "create manager-test (rig-scoped manager template)"
 gc_test_new_manager "manager-test"
-(
-    cd "${CITY_DIR}"
-    gc session submit manager-test "You own a trivial Phase 0 test workstream. Scope: the scratch-proj repository. Your only deliverable: when a Worker task arrives, review it and report a short compressed summary to executive. Do not implement code yourself." --intent follow_up >/dev/null 2>&1 || true
-)
+gc_test_brief_manager "manager-test" "You own a trivial Phase 0 test workstream. Scope: the scratch-proj repository. Your only deliverable: when a Worker task arrives, review it and report a short compressed summary to executive. Do not implement code yourself."
 
 step "route Worker task (durable bead + sling)"
 TASK_DESC="Create PHASE0_TEST.txt containing exactly: ${EXPECTED_TEXT}

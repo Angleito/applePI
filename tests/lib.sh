@@ -75,7 +75,7 @@ gc_test_boot() {
     git clone -q "${CITY_REPO}" "${CITY_DIR}"
     [ -f "${CITY_DIR}/city.toml" ] || fail "clone missing city.toml"
     [ -f "${CITY_DIR}/pack.toml" ] || fail "clone missing pack.toml"
-    [ -f "${CITY_DIR}/agents/worker/agent.toml" ] || fail "clone missing worker agent"
+    [ -f "${CITY_DIR}/packs/applepi-roles/agents/worker/agent.toml" ] || fail "clone missing worker agent"
 
     step "bootstrap city (canonical v1.4.1 structure preserved)"
     (
@@ -121,8 +121,25 @@ gc_test_new_manager() {
     (
         cd "${CITY_DIR}"
         gc session new scratch-proj/applepi-roles.manager --alias "${alias}" --no-attach >/dev/null
-        wait_for 60 "${alias} session exists" bash -c "gc session list | grep -q ${alias}"
+        wait_for 120 "${alias} session exists" bash -c "gc session list | grep -q ${alias}"
+        wait_for 300 "${alias} session active" bash -c "gc session list | awk -v a=\"${alias}\" '\$5 ~ a && \$3 == \"active\" {found=1} END {exit !found}'"
     ) || fail "${alias} creation failed"
+}
+
+gc_test_brief_manager() { # submit the workstream brief, retrying until accepted
+    local alias="$1" brief="$2"
+    (
+        cd "${CITY_DIR}"
+        local i=0
+        while [ "${i}" -lt 12 ]; do
+            if gc session submit "${alias}" "${brief}" --intent follow_up >/dev/null 2>&1; then
+                return 0
+            fi
+            sleep 10
+            i=$((i + 1))
+        done
+        fail "brief not accepted by ${alias}"
+    )
 }
 
 gc_test_sling() {
