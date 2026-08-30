@@ -3,7 +3,7 @@ install_agent_hooks = ["pi"]
 provider = "pi"
 option_defaults = { model = "deepseek-v4-flash" }
 scope = "rig"
-dir = "scratch-proj"
+work_dir = "{{.RigRoot}}"
 min_active_sessions = 0
 # max_active_sessions capped at 1 until automatic worktree isolation is
 # implemented and validated. Multiple concurrent writing Workers inside

@@ -1,9 +1,7 @@
-install_agent_hooks = ["pi"]
-
 provider = "pi"
 option_defaults = { model = "deepseek-v4-pro" }
 scope = "rig"
-dir = "scratch-proj"
+work_dir = "{{.RigRoot}}"
 
 [env]
 PI_SUBAGENT_ENABLED = "0"

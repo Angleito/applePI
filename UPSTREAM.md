@@ -11,6 +11,7 @@ This harness consumes three sources. Only two are ever modified.
 | Release SHA   | `58ef17e3bd685fd5cf7f21286277b208d3324590`                   |
 | Install       | `gascity_1.4.1_linux_amd64.tar.gz` (sha256-verified) → `~/.local/bin/gc` |
 | Pack pins     | `core` + `bd`, both `sha:f895c0ff…` — the canonical pins written by `gc init` (v1.4.1 bundled pack cache) |
+| applePI pack  | `packs/applepi-roles/` — in-repo reusable rig roles; imported per rig via `[rigs.imports.applepi-roles] source = "packs/applepi-roles"` (relative to the city root, so fresh clones resolve it) |
 
 Do not modify Gas City. Consume the pinned release. To bump: update the
 release + pack pins together, re-run `gc import install`, and re-run the

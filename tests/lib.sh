@@ -120,7 +120,7 @@ gc_test_new_manager() {
     local alias="$1"
     (
         cd "${CITY_DIR}"
-        gc session new scratch-proj/manager --alias "${alias}" --no-attach >/dev/null
+        gc session new scratch-proj/applepi-roles.manager --alias "${alias}" --no-attach >/dev/null
         wait_for 60 "${alias} session exists" bash -c "gc session list | grep -q ${alias}"
     ) || fail "${alias} creation failed"
 }
@@ -130,7 +130,7 @@ gc_test_sling() {
     local bead_id
     (
         cd "${RIG_DIR}"
-        bead_id="$(gc sling scratch-proj/worker "${desc}" --title "${title}" --json 2>/dev/null | jq -r '.bead_id // .id // empty' 2>/dev/null || true)"
+        bead_id="$(gc sling scratch-proj/applepi-roles.worker "${desc}" --title "${title}" --json 2>/dev/null | jq -r '.bead_id // .id // empty' 2>/dev/null || true)"
         if [ -z "${bead_id:-}" ]; then
             bead_id="$(gc bd list --json 2>/dev/null | jq -r ".[] | select(.title | startswith(\"${title}\")) | .id" | head -1 || true)"
         fi
@@ -147,7 +147,7 @@ gc_test_bead() { # gc_test_bead <bead_id> <jq-expr>
 gc_test_worker_in_rig() { # waits for a worker session bound to the rig
     (
         cd "${CITY_DIR}"
-        wait_for 600 "worker session bound to rig" bash -c "gc session list | awk -v r=\"${RIG_DIR}\" '\$2 == \"scratch-proj/worker\" && \$7 == r {found=1} END {exit !found}'"
+        wait_for 600 "worker session bound to rig" bash -c "gc session list | awk -v r=\"${RIG_DIR}\" '\$2 == \"scratch-proj/applepi-roles.worker\" && \$7 == r {found=1} END {exit !found}'"
     )
 }
 

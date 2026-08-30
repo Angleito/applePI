@@ -1,0 +1,16 @@
+# applepi-roles — reusable applePI rig roles pack.
+#
+# Rig-scoped Manager and Worker templates consumed via rig imports:
+#   [[rigs]]
+#   name = "<project>"
+#   [rigs.imports.applepi-roles]
+#   source = "packs/applepi-roles"
+#
+# Each importing rig expands this pack's agents as <rig>/applepi-roles.<agent>
+# with the rig root as the working directory (work_dir = "{{.RigRoot}}") —
+# no hardcoded project names. The Executive template stays city-scoped in
+# agents/executive/ at the repo root.
+[pack]
+name = "applepi-roles"
+schema = 2
+description = "Reusable applePI rig roles: manager (one per workstream) and worker (elastic pool), rig-scoped via rig imports."

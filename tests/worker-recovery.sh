@@ -56,7 +56,7 @@ step "Worker materializes and claims"
 gc_test_worker_in_rig
 WORKER_SESSION_ID="$(
     cd "${CITY_DIR}"
-    gc session list | awk '$2 == "scratch-proj/worker" {print $1; exit}'
+    gc session list | awk '$2 == "scratch-proj/applepi-roles.worker" {print $1; exit}'
 )"
 [ -n "${WORKER_SESSION_ID}" ] || fail "could not determine worker session id"
 wait_for 120 "bead claimed" bash -c "cd '${RIG_DIR}' && gc bd show '${BEAD_ID}' --json 2>/dev/null | jq -e '.[0].status == \"in_progress\"'"

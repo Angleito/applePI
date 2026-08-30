@@ -69,7 +69,7 @@ step "Worker completes the task (file + commit)"
 step "kill the Manager session"
 MANAGER_SESSION_ID="$(
     cd "${CITY_DIR}"
-    gc session list | awk '$2 == "scratch-proj/manager" {print $1; exit}'
+    gc session list | awk '$2 == "scratch-proj/applepi-roles.manager" {print $1; exit}'
 )"
 [ -n "${MANAGER_SESSION_ID}" ] || fail "could not determine manager session id"
 (cd "${CITY_DIR}" && gc session kill "${MANAGER_SESSION_ID}" >/dev/null) || fail "session kill failed"

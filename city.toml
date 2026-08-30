@@ -39,3 +39,9 @@ flag_args = ["--provider", "opencode-go", "--model", "deepseek-v4-pro"]
 [[rigs]]
 name = "scratch-proj"
 default_branch = "main"
+# Reusable rig-scoped Manager/Worker templates (see packs/applepi-roles).
+# The relative source resolves against the city root, so fresh clones of
+# this repo get the same pack with no machine-specific paths.
+[rigs.imports]
+[rigs.imports.applepi-roles]
+source = "packs/applepi-roles"
