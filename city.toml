@@ -4,30 +4,16 @@ provider = "pi"
 [agent_defaults]
 provider = "pi"
 
-[beads]
-provider = "file"
+# Beads provider: unset = Gas City default "bd" (Dolt-backed).
+# Do not set provider = "file": the file store cannot claim routed work
+# (gastownhall/gascity#1761); all durable work queries require bd.
 
-# Role-based model choices on top of the builtin pi harness.
-# Changing a model here is configuration, not architecture.
+# Pi remains the agent runtime. The launcher selects its backend and model
+# from the user's ignored .env file, never from committed credentials.
 [providers.pi]
 base = "builtin:pi"
-options_schema_merge = "by_key"
-
-[[providers.pi.options_schema]]
-key = "model"
-label = "Model"
-type = "select"
-default = "deepseek-v4-flash"
-
-[[providers.pi.options_schema.choices]]
-value = "deepseek-v4-flash"
-label = "DeepSeek V4 Flash"
-flag_args = ["--provider", "opencode-go", "--model", "deepseek-v4-flash"]
-
-[[providers.pi.options_schema.choices]]
-value = "deepseek-v4-pro"
-label = "DeepSeek V4 Pro"
-flag_args = ["--provider", "opencode-go", "--model", "deepseek-v4-pro"]
+command = "sh"
+args = ["-c", "exec \"$GC_CITY/pi-launcher.sh\" \"$@\"", "pi-launcher"]
 
 # [mail]
 # retention_ttl controls how long read messages are retained before purge.
@@ -38,3 +24,9 @@ flag_args = ["--provider", "opencode-go", "--model", "deepseek-v4-pro"]
 [[rigs]]
 name = "scratch-proj"
 default_branch = "main"
+# Reusable rig-scoped Manager/Worker templates (see packs/applepi-roles).
+# The relative source resolves against the city root, so fresh clones of
+# this repo get the same pack with no machine-specific paths.
+[rigs.imports]
+[rigs.imports.applepi-roles]
+source = "packs/applepi-roles"
