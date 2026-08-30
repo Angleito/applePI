@@ -24,12 +24,13 @@ implements Human, Executive, Manager, Worker. Scout is planned (Phase 5).
 
 ```text
 agents/
-  executive/   agent.toml + prompt.template.md   (deepseek-v4-pro, city-scoped)
+  executive/   agent.toml + prompt.template.md   (Pi, city-scoped)
 packs/
   applepi-roles/
-    agents/manager/   agent.toml + prompt.template.md   (deepseek-v4-pro)
-    agents/worker/    agent.toml + prompt.template.md   (deepseek-v4-flash)
-city.toml      workspace, pi provider + role model choices, rigs + rig imports
+    agents/manager/   agent.toml + prompt.template.md   (Pi)
+    agents/worker/    agent.toml + prompt.template.md   (Pi)
+city.toml        workspace, Pi launcher + rigs + rig imports
+  pi-launcher.sh Pi backend/model selection from local .env
 pack.toml      canonical Gas City v1.4.1 imports: core + bd
 packs.lock     pinned pack resolution (agrees with pack.toml)
 UPSTREAM.md    upstreams, pins, prerequisites
@@ -79,8 +80,13 @@ pi --version    # >= 0.84
 bd version
 dolt version
 
-# city bootstrap (once, or re-run after a fresh clone)
-gc init . --template minimal --default-provider pi --skip-provider-readiness --no-start
+# Select the local Pi backend and role models. .env is gitignored.
+cp .env.example .env
+pi auth check --provider openai-codex --model gpt-5.6-luna
+
+# city bootstrap (once, or after a fresh clone). Preserve the committed
+# Pi launcher configuration instead of replacing city.toml with a template.
+gc init --file city.toml --preserve-existing --skip-provider-readiness --no-start --yes .
 gc import install
 gc start
 
@@ -95,8 +101,25 @@ gc rig add ~/Projects/stockbot --include packs/applepi-roles
 gc session attach executive
 ```
 
-`gc init` rewrites `city.toml`/`pack.toml` from its canonical templates —
-run it before editing anything in a fresh clone.
+The bootstrap command preserves the committed `city.toml`/`pack.toml`; do not
+replace them with `gc init --template ...` after configuring the repository.
+
+### Pi backend and models
+
+`pi-launcher.sh` is the single Pi provider command used by every role. It
+loads an optional local `.env` and otherwise uses these public defaults:
+
+```text
+APPLEPI_PI_PROVIDER=openai-codex
+APPLEPI_PI_EXECUTIVE_MODEL=gpt-5.6-terra
+APPLEPI_PI_MANAGER_MODEL=gpt-5.6-terra
+APPLEPI_PI_WORKER_MODEL=gpt-5.6-luna
+```
+
+For ChatGPT/Codex, authenticate Pi locally with the `openai-codex` provider;
+`pi auth check --provider openai-codex --model gpt-5.6-luna` confirms it is
+ready. The repository stores no Pi credentials. To use another Pi backend,
+set `APPLEPI_PI_PROVIDER` and compatible role model IDs in `.env`.
 
 ## Worker claim flow
 
@@ -165,4 +188,5 @@ commitment that those files exist yet.
 
 This repository is public. Machine-local state (`.gc/`, `.beads/` runtime,
 rig paths in `.gc/site.toml`) is gitignored; only `.beads/identity.toml`
-is committed. Pi authenticates via `~/.pi/agent/auth.json`, never in-repo.
+is committed. Pi authenticates via user-local state (for example
+`~/.pi/agent/auth.json`), never in-repo.

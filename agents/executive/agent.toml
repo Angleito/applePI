@@ -1,7 +1,6 @@
 install_agent_hooks = ["pi"]
 
 provider = "pi"
-option_defaults = { model = "deepseek-v4-pro" }
 
 [env]
 PI_SUBAGENT_ENABLED = "0"

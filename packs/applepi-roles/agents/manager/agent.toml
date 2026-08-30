@@ -1,5 +1,4 @@
 provider = "pi"
-option_defaults = { model = "deepseek-v4-pro" }
 scope = "rig"
 work_dir = "{{.RigRoot}}"
 
