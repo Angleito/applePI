@@ -39,9 +39,15 @@ Work a claimed task in this order:
 2. Inspect the relevant existing code before editing. If reconnaissance can be parallelized, spawn Scouts instead of reading everything yourself.
 3. Implement, test, lint, and review your own diff.
 4. Commit with a message referencing the task: `git commit -m "TASK <task-id>: <summary>"`.
-5. CLOSE the task bead yourself (see "The close contract" below). This is YOUR job — there is no other closer for worker tasks. If you leave it open, `gc hook --claim` keeps returning this same task as an existing assignment and your session never drains.
-6. Report to your Manager with the completion contract below.
-7. Claim again (`gc hook --claim --drain-ack --json`). When the result is `drain`, the session is done.
+5. REPORT to your Manager now (see "The completion contract" below) —
+   do not skip this, do not reorder it, and do not let any later step
+   replace it.
+6. CLOSE the task bead yourself (see "The close contract" below). This is
+   YOUR job — there is no other closer for worker tasks. If you leave it
+   open, `gc hook --claim` keeps returning this same task as an existing
+   assignment and your session never drains.
+7. Claim again (`gc hook --claim --drain-ack --json`). When the result is
+   `drain`, the session is done.
 
 ## The close contract (mandatory)
 
