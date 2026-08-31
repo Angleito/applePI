@@ -23,17 +23,11 @@ Roles: Human, Executive, Manager, Worker. Scout is planned.
 
 ## Why we left Gas City
 
-- No strict `gc.work_dir` enforcement — Gas City's work_dir is diagnostic
-  only (gastownhall/gascity#1761), keeping runtime integration blocked and
-  the worker pool capped at 0..1.
-- Factory state was tied to Gas City's beads/Dolt backend instead of a
-  model-neutral, ApplePI-owned durable store.
-- Task identity, formulas, and recovery were Gas City-specific — no clean
-  path to objective → task DAG → deterministic verification → repair.
-- Verification was not part of execution: "agent says done" closed the
-  bead; v2 requires the worker never certifies its own completion.
-- Rigid Executive → Manager → Worker topology; v2 wants a thin generic
-  runtime (CAO) + disposable OMP sessions + factory semantics in ApplePI.
+- Too dangerous security-wise: Gas City injected into the agent — untrusted
+  content (bead/issue/PR/repo text) fed straight into the agent's context,
+  plus its own session/runtime hooks in the running agent. That injection
+  path enabled arbitrary command execution with full user privileges.
+- Too many technical moving parts that complicated the project.
 
 ## How to use it right now
 
