@@ -77,5 +77,7 @@ ApplePI v2 is a long-horizon software factory:
 - Harbor evaluates the factory empirically against frozen benchmarks.
 
 The v2 foundation is not implemented yet; [docs/ROADMAP.md](docs/ROADMAP.md)
-is the plan. This README describes the current system only.
+is the plan. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) records the target
+architecture and pinned dependency versions. This README describes the
+current system only.
 
