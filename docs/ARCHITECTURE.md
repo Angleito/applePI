@@ -48,17 +48,22 @@ Mandated by `docs/ROADMAP.md` §8.1. Do not build reproducibility around
 | CAO | process/session orchestration | awslabs/cli-agent-orchestrator | v2.5.0 (2026-08-28) | `a5ccbe2624aabadfbdf64642c5f1e364db299ec3` | `uv tool install git+https://github.com/awslabs/cli-agent-orchestrator.git@v2.5.0` (or PyPI `cli-agent-orchestrator==2.5.0`) | not installed — Phase 0 §8.2 |
 | OMP (Oh My Pi) | coding agent (workers) | can1357/oh-my-pi | v17.2.10 | `43c1b245e79f845c7ed7c692b79b4acd0f5c56af` | `curl -fsSL https://omp.sh/install \| sh` (or `bun install -g @oh-my-pi/pi-coding-agent`) | not installed — Phase 0 §8.2 (CAO fixtures target 17.2.10) |
 | pi-interactive-subagents | Scout/Researcher subagents | amosblomqvist/pi-interactive-subagents | — | not pinned | — | planned Phase 2 (per UPSTREAM.md) |
+| Harbor | evaluation harness | harbor-framework/harbor | v0.22.0 (2026-08-22) | `4407eb5227a2ff4f0d3f16b2eb48849382fdf276` (peeled commit of tag v0.22.0) | `uv tool install harbor==0.22.0` | installed — oracle demo PASS (2026-08-31), see below |
 
 Oracle demo (2026-08-31): **PASS** — 2/2 trials (reward 1.0 each, 0
 exceptions), dataset `terminal-bench@2.0`, task IDs `overfull-hbox` and
 `filter-js-from-html`, oracle agent, 1 attempt, concurrency 1, Harbor-native
 Docker task containers. Command: `harbor run -d terminal-bench@2.0 -a oracle
 -i overfull-hbox -i filter-js-from-html -k 1 -n 1 -o ~/.cache/harbor/jobs
--y`. Repeatable via `bench/harbor/demo.sh`.
+-y`. Repeatable via `bench/harbor/demo.sh`. This PASS is manual evidence —
+recorded from a run of `bench/harbor/demo.sh`; no CI workflow enforces it.
 
 - OMP identity decision: v2 uses Oh My Pi (can1357/oh-my-pi) because CAO's
   hard-coded provider registry supports `omp` natively and has no
   `pi`/generic provider; badlogic Pi 0.84.3 remains the current-runtime
   agent until v2 replaces it.
-- Do not build reproducibility around "latest" (ROADMAP §8.1); all pins are
-  exact tags/commits.
+- Do not build reproducibility around "latest" (ROADMAP §8.1); all recorded
+  pins are exact tags/commits.
+- §8.1 is intentionally partially deferred for pi-interactive-subagents: per
+  UPSTREAM.md its base SHA is recorded at fork time (Phase 2), not before;
+  the table above is complete for every other component.
