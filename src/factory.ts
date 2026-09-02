@@ -1,19 +1,21 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Database } from "bun:sqlite";
-import { CaoRuntime } from "./cao-runtime";
+import { CaoRuntime, type AgentRuntime } from "./cao-runtime";
 import {
   createObjective,
   createTask,
   getObjective,
+  getTasksForObjective,
   openDatabase,
   setTaskCommitSha,
   updateObjectiveState,
   updateTaskState,
 } from "./database";
+import { integrateBranch } from "./integrate";
 import { assertCleanMain, createWorktree, removeWorktree, repoBaseCommit } from "./worktree";
 import { verifyWorktree } from "./verifier";
-import type { Segment } from "./verifier";
+import type { Segment, VerifierResult } from "./verifier";
 
 export type Io = {
   isTTY: boolean;
@@ -24,14 +26,36 @@ export type Io = {
 const SEGMENT_PREFIX_RE = /^applepi-task-\d+:$/;
 const PROCEED = "Proceed with your proposal.";
 
-/** Phase A proposal-session instruction (plan Step 5, verbatim body). */
-export function phaseAInstruction(cwd: string): string {
-  return `You are ApplePI's executive for the repository at ${cwd}. Read docs/ROADMAP.md. Identify the next unfinished item in section 42 (IMPLEMENTATION ORDER) that can be completed as a bounded code change with deterministic checks; if the literal next item cannot (infrastructure proof, unavailable machinery, not a bounded code change), state why and propose the next implementable item. Write your clarification request to .applepi/clarification/request.json as JSON {"questions":[{"question":"...","choices":["...","..."]}]} with 1 to 3 questions, each with 2 to 4 choices. End your turn after writing the file. Do not modify any tracked files.`;
+/** Phase A proposal-session instruction: understand the HUMAN objective (authoritative) and ask for clarification. */
+export function phaseAInstruction(cwd: string, objectiveText: string): string {
+  return `You are ApplePI's Executive for the repository at ${cwd}.
+
+HUMAN OBJECTIVE:
+${objectiveText}
+
+This human objective is authoritative. Your job is to understand and execute it.
+Read the repository and relevant documentation as context. If the objective asks you to follow the roadmap, inspect docs/ROADMAP.md. Otherwise, do not replace the objective with a roadmap task.
+The human is in the loop and is the authority for every decision and opinion; you decide only code. For every point requiring a decision or preference, ask one bounded question with 2 to 4 choices (1 to 3 questions total).
+Write your clarification request to .applepi/clarification/request.json as JSON {"questions":[{"question":"...","choices":["...","..."]}]}.
+Identify one bounded implementation direction. End your turn after writing the file. Do not modify any tracked files.`;
 }
 
-/** Phase B execution-session instruction (plan Step 5, verbatim body; {answer} substituted). */
-export function phaseBInstruction(cwd: string, answer: string): string {
-  return `You are ApplePI's executive for the repository at ${cwd}. The human answered your clarification: ${answer}. Finalize the chosen roadmap item from docs/ROADMAP.md section 42. Decompose the work into 1 to 4 smaller segments. Write .applepi/segments.json as JSON [{"instruction":"...","commit_prefix":"applepi-task-1:"},...] with unique prefixes applepi-task-<n>: (n starting at 1) and non-empty instructions. Then, for each segment IN ORDER, spawn one worker subagent via the Task tool with exactly that segment's instruction. Every worker instruction must end with: 'If node_modules is missing, run bun install --frozen-lockfile first. Implement the segment. Run the repository checks relevant to your change (bun run check is acceptable; it is fine if the e2e test skips). Commit with a message starting with <prefix>. Do not modify anything outside this worktree.' Do not commit anything yourself. Do not create any other commits. End your turn after all segments are done.`;
+/** Phase B1 decomposition-session instruction: finalize direction and decompose into segments; no workers. */
+export function phaseB1Instruction(cwd: string, objectiveText: string, answersJson: string): string {
+  return `You are ApplePI's Executive for the repository at ${cwd}.
+
+HUMAN OBJECTIVE:
+${objectiveText}
+
+The human answered your clarification: ${answersJson}.
+Finalize the bounded implementation direction from the human objective. Decompose the work into 1 to 4 smaller segments. Write .applepi/segments.json as JSON [{"instruction":"...","commit_prefix":"applepi-task-1:"},...] with unique prefixes applepi-task-<n>: (n starting at 1) and non-empty instructions. Do NOT spawn any worker subagents. Do NOT modify tracked files. Do NOT create any commits. End your turn after writing the file.`;
+}
+
+/** Phase B2 execution-session instruction: run the persisted segments exactly as recorded. */
+export function phaseB2Instruction(cwd: string, segmentsJson: string): string {
+  return `You are ApplePI's Executive for the repository at ${cwd}.
+
+These segments have already been accepted and persisted by ApplePI. Execute exactly these segments in order: ${segmentsJson}. For each segment: spawn one worker subagent via the Task tool with exactly that segment's instruction; require the supplied commit prefix; require the worker to run the repository checks relevant to its change and commit with a message starting with the prefix; end the worker instruction with 'Do not modify anything outside this worktree.' Do not add, remove, merge, or reinterpret segments. Do not regenerate or rewrite segments.json. Do not create any commits yourself. End your turn after all segments are done.`;
 }
 
 function git(repoPath: string, args: string[]): string {
@@ -136,12 +160,18 @@ export async function runObjective(
   repoPath: string,
   objectiveText: string,
   io: Io,
+  runtime: AgentRuntime = new CaoRuntime(repoPath),
+  verify: (
+    worktreePath: string,
+    baseCommit: string,
+    segments: Segment[],
+  ) => Promise<VerifierResult> = verifyWorktree,
 ): Promise<number> {
-  const runtime = new CaoRuntime(repoPath);
   let db: Database | null = null;
   let objectiveId: number | null = null;
   let worktreePath: string | null = null;
   let branch: string | null = null;
+  let taskIds: number[] = [];
   try {
     // 1. Clean main, base commit, durable objective (running).
     assertCleanMain(repoPath);
@@ -161,10 +191,11 @@ export async function runObjective(
     branch = wt.branch;
     io.print(`worktree: ${wt.path}`);
 
-    // 3. Phase A: executive proposes and asks for clarification.
+    // 3. Phase A: executive understands the human objective and asks for clarification.
     const workerA = await runtime.startWorker({
       cwd: wt.path,
-      instruction: phaseAInstruction(wt.path),
+      phase: "a",
+      instruction: phaseAInstruction(wt.path, objectiveText),
     });
     const resultA = await runtime.wait(workerA);
     if (!resultA.ok) {
@@ -205,19 +236,21 @@ export async function runObjective(
     mkdirSync(join(wt.path, ".applepi", "clarification"), { recursive: true });
     writeFileSync(join(wt.path, ".applepi", "clarification", "answer.json"), answersJson);
 
-    // 5. Phase B: executive decomposes into segments and dispatches workers.
-    const workerB = await runtime.startWorker({
+    // 5. Phase B1: executive finalizes the direction and decomposes into segments only.
+    const workerB1 = await runtime.startWorker({
       cwd: wt.path,
-      instruction: phaseBInstruction(wt.path, answersJson),
+      phase: "b1",
+      instruction: phaseB1Instruction(wt.path, objectiveText, answersJson),
     });
-    const resultB = await runtime.wait(workerB);
-    if (!resultB.ok) {
+    const resultB1 = await runtime.wait(workerB1);
+    if (!resultB1.ok) {
       updateObjectiveState(db, objectiveId, "failed");
-      io.print(`Phase B failed (state: ${resultB.state}): ${resultB.detail}`);
+      io.print(`Phase B1 failed (state: ${resultB1.state}): ${resultB1.detail}`);
       return 1;
     }
 
-    // 6. Segments: validate, one task row per segment (pending → running).
+    // 6. Durability boundary: validate segments, then persist one task row per
+    // segment BEFORE any execution starts, so a crash mid-run leaves a record.
     let segments: Segment[];
     try {
       segments = parseSegments(readFileSync(join(wt.path, ".applepi", "segments.json"), "utf8"));
@@ -226,12 +259,27 @@ export async function runObjective(
       io.print(`Invalid segments.json: ${(err as Error).message}`);
       return 1;
     }
-    const taskIds = segments.map((s) => createTask(db!, objectiveId!, s.instruction, wt.path));
+    taskIds = segments.map((s) => createTask(db!, objectiveId!, s.instruction, wt.path));
     for (const id of taskIds) updateTaskState(db!, id, "running");
 
-    // 7. Verify: tasks → verifying; deterministic checks gate integration.
+    // 7. Phase B2: executive executes exactly the persisted segments.
+    const workerB2 = await runtime.startWorker({
+      cwd: wt.path,
+      phase: "b2",
+      instruction: phaseB2Instruction(wt.path, JSON.stringify(segments)),
+    });
+    const resultB2 = await runtime.wait(workerB2);
+    if (!resultB2.ok) {
+      for (const id of taskIds) updateTaskState(db!, id, "failed");
+      updateObjectiveState(db!, objectiveId!, "failed");
+      io.print(`Phase B2 failed (state: ${resultB2.state}): ${resultB2.detail}`);
+      io.print(`Worktree retained: ${wt.path}`);
+      return 1;
+    }
+
+    // 8. Verify: tasks → verifying; deterministic checks gate integration.
     for (const id of taskIds) updateTaskState(db!, id, "verifying");
-    const verifierResult = await verifyWorktree(wt.path, baseCommit, segments);
+    const verifierResult = await verify(wt.path, baseCommit, segments);
 
     if (verifierResult.passed) {
       const log = git(wt.path, ["log", "--format=%H %s", `${baseCommit}..HEAD`]).trim();
@@ -247,18 +295,23 @@ export async function runObjective(
         const match = entries.find((e) => e.subject.startsWith(seg.commit_prefix));
         if (!match) throw new Error(`no commit found with prefix ${seg.commit_prefix}`);
         const short = git(wt.path, ["rev-parse", "--short", match.sha]).trim();
+        // SHA persisted pre-integration for diagnostics; state stays "verifying".
         setTaskCommitSha(db!, taskIds[i]!, short);
-        updateTaskState(db!, taskIds[i]!, "completed");
         shortShas.push(short);
       });
 
-      // Integrate: ff-only merge, cherry-pick fallback.
-      try {
-        git(repoPath, ["merge", "--ff-only", branch!]);
-      } catch {
-        git(repoPath, ["cherry-pick", `${baseCommit}..${branch!}`]);
+      // 9. Integrate: completion requires verification PASS + successful integration.
+      const integration = integrateBranch(repoPath, baseCommit, branch!);
+      if (!integration.ok) {
+        for (const id of taskIds) updateTaskState(db!, id, "failed");
+        updateObjectiveState(db!, objectiveId!, "failed");
+        io.print(`Objective ${objectiveId} failed`);
+        io.print(`Integration failed: ${integration.error}`);
+        io.print(`Worktree retained: ${wt.path}`);
+        return 1;
       }
-      const headSha = git(repoPath, ["rev-parse", "HEAD"]).trim();
+      // Success: completion states before worktree removal, per invariant.
+      for (const id of taskIds) updateTaskState(db!, id, "completed");
       updateObjectiveState(db!, objectiveId!, "completed");
       removeWorktree(repoPath, wt.path, branch!);
       io.print(`Objective ${objectiveId} completed`);
@@ -266,7 +319,7 @@ export async function runObjective(
         io.print(`  task ${taskIds[i]}: ${seg.commit_prefix} ${shortShas[i]}`),
       );
       io.print("verification: PASS");
-      io.print(`integrated HEAD: ${headSha}`);
+      io.print(`integrated HEAD: ${integration.headSha}`);
       return 0;
     }
 
@@ -292,10 +345,16 @@ export async function runObjective(
       if (objective && objective.state === "running") {
         updateObjectiveState(db, objectiveId, "failed");
       }
+      // Only in-flight tasks flip to failed; completed/failed stay as-is.
+      for (const task of getTasksForObjective(db, objectiveId)) {
+        if (task.state === "pending" || task.state === "running" || task.state === "verifying") {
+          updateTaskState(db, task.id, "failed");
+        }
+      }
     }
     return 1;
   } finally {
-    // 8. Server lifecycle: kill only what ApplePI spawned. Idempotent.
+    // Server lifecycle: kill only what ApplePI spawned. Idempotent.
     await runtime.stopServer();
   }
 }

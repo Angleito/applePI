@@ -26,10 +26,12 @@ function readTerminalStatus(body: unknown): string {
   return typeof status === "string" ? status.toLowerCase() : "";
 }
 
+export type Phase = "a" | "b1" | "b2";
+
 export interface AgentRuntime {
-  startWorker(input: { cwd: string; instruction: string }): Promise<WorkerHandle>;
+  startWorker(input: { cwd: string; phase: Phase; instruction: string }): Promise<WorkerHandle>;
   wait(worker: WorkerHandle): Promise<WorkerResult>;
-  stop(worker: WorkerHandle): Promise<void>;
+  stopServer(): Promise<void>;
 }
 
 export type WorkerHandle = { sessionName: string };
@@ -79,14 +81,13 @@ export class CaoRuntime implements AgentRuntime {
     await child.exited.catch(() => {});
   }
 
-  async startWorker(input: { cwd: string; instruction: string }): Promise<WorkerHandle> {
+  async startWorker(input: { cwd: string; phase: Phase; instruction: string }): Promise<WorkerHandle> {
     await this.ensureServer();
-    const phase = this.#phaseFor(input.instruction);
-    await this.#writeAndInstallProfile(phase, input.instruction);
+    await this.#writeAndInstallProfile(input.phase, input.instruction);
     // CAO prefixes every session with "cao-" (verified: --session-name smoke1
     // creates the tmux session cao-smoke1), so the handle must use the
     // server-side name.
-    const sessionName = `cao-applepi-exec-${phase}-${this.#launchCount}-${Date.now()}`;
+    const sessionName = `cao-applepi-exec-${input.phase}-${this.#launchCount}-${Date.now()}`;
     const argv = [
       "cao",
       "launch",
@@ -156,24 +157,7 @@ export class CaoRuntime implements AgentRuntime {
     }
   }
 
-  async stop(worker: WorkerHandle): Promise<void> {
-    try {
-      const proc = Bun.spawn(["cao", "shutdown", "--session", worker.sessionName], {
-        stdio: ["ignore", "ignore", "ignore"],
-      });
-      await proc.exited;
-    } catch {
-      // ignore non-zero exit and not-found errors
-    }
-  }
-
-  #phaseFor(instruction: string): "a" | "b" {
-    if (instruction.includes("Read docs/ROADMAP.md")) return "a";
-    if (instruction.includes("segments.json")) return "b";
-    return this.#launchCount % 2 === 0 ? "a" : "b";
-  }
-
-  async #writeAndInstallProfile(phase: "a" | "b", instruction: string): Promise<void> {
+  async #writeAndInstallProfile(phase: Phase, instruction: string): Promise<void> {
     const dir = join(this.repoPath, ".applepi", "profiles");
     mkdirSync(dir, { recursive: true });
     const file = join(dir, `applepi-executive-${phase}.md`);

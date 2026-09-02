@@ -67,6 +67,16 @@ test.skipIf(!process.env.APPLEPI_E2E)(
         expect(task.worktree_path).not.toBeNull();
       }
 
+      // Objective ↔ task linkage: the completed objective is the human-objective
+      // row, and every completed task belongs to it (no stray rows).
+      expect(objectives.some((o) => o.instruction === OBJECTIVE && o.state === "completed")).toBe(
+        true,
+      );
+      const objectiveId = objectives.find((o) => o.instruction === OBJECTIVE)!.id;
+      for (const task of tasks) {
+        if (task.state === "completed") expect(task.objective_id).toBe(objectiveId);
+      }
+
       // Worker commits integrated: every completed task's sha is a commit in
       // base..HEAD whose subject starts with applepi-task-<n>:, and HEAD descends from base.
       expect(git(fixture, ["status", "--porcelain"]).trim()).toBe("");
@@ -79,6 +89,12 @@ test.skipIf(!process.env.APPLEPI_E2E)(
         expect(subject).toMatch(/^applepi-task-\d+:/);
         expect(subjects).toContain(subject);
       }
+
+      // Success cleans up: no applepi worktree and no applepi branch remain.
+      expect(git(fixture, ["worktree", "list", "--porcelain"]).includes(".applepi/worktrees")).toBe(
+        false,
+      );
+      expect(git(fixture, ["branch", "--list", "applepi/*"]).trim()).toBe("");
     } catch (err) {
       cleanup = false;
       console.log(`e2e fixture retained at: ${fixture}`);
