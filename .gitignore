@@ -23,3 +23,5 @@ tmp/
 # Local editor/OS noise
 *.swp
 .DS_Store
+node_modules/
+.applepi/
