@@ -1,6 +1,0 @@
-install_agent_hooks = ["pi"]
-
-provider = "pi"
-
-[env]
-PI_SUBAGENT_ENABLED = "0"

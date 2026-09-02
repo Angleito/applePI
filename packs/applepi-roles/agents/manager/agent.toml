@@ -1,6 +1,0 @@
-provider = "pi"
-scope = "rig"
-work_dir = "{{.RigRoot}}"
-
-[env]
-PI_SUBAGENT_ENABLED = "0"

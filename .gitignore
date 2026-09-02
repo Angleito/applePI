@@ -1,27 +1,13 @@
-# Gas City runtime state (machine-local; never commit)
-.gc/
+# ApplePI machine-local state and artifacts
 .env
-.beads/*
-!.beads/identity.toml
-hooks/
-
-# Beads / Dolt runtime artifacts
-.dolt/
-.dolt-backup/
 *.db
-.beads-credential-key
-.beads/proxieddb/
-
-# Pi harness extensions installed into agent workdirs
-.pi/
-
-# Scratch and test cities/projects
-scratch/
-tmp/
 /tests/work/
+node_modules/
+.applepi/
 
 # Local editor/OS noise
 *.swp
 .DS_Store
-node_modules/
-.applepi/
+
+# Gas City (phase0) history lives on the archived branch `phase0-pi-codex`
+# and in docs/ROADMAP.md; the phase0 harness itself is no longer maintained.
