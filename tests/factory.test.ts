@@ -189,3 +189,75 @@ test("integration failure fails the objective and task and leaves no cherry-pick
     rmSync(fixture, { recursive: true, force: true });
   }
 });
+
+test("detached HEAD fails fast with no branch created", async () => {
+  const fixture = mkdtempSync(join(tmpdir(), "applepi-factory-detached-"));
+  try {
+    initRepo(fixture);
+    git(fixture, ["checkout", "--detach", "HEAD"]);
+    class FakeRuntime {
+      async startWorker(): Promise<never> {
+        throw new Error("must not be called on detached HEAD");
+      }
+      async wait(_worker: WorkerHandle): Promise<WorkerResult> {
+        return { ok: true, state: "completed", detail: "" };
+      }
+      async stopServer(): Promise<void> {}
+    }
+    const code = await runObjective(fixture, "detached HEAD test", io, new FakeRuntime() as never);
+    expect(code).toBe(1);
+    // Guard fires before persistence, so no objective row exists yet.
+    const db = openDatabase(fixture);
+    const objectives = db.query("SELECT * FROM objectives").all() as Objective[];
+    expect(objectives).toHaveLength(0);
+    expect(git(fixture, ["branch", "--list", "applepi/*"]).trim()).toBe("");
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+test("non-sequential unique prefixes are accepted", async () => {
+  const fixture = mkdtempSync(join(tmpdir(), "applepi-factory-prefixes-"));
+  try {
+    initRepo(fixture);
+    class FakeRuntime {
+      async startWorker(input: { cwd: string; phase: Phase; instruction: string }) {
+        if (input.phase === "a") {
+          mkdirSync(join(input.cwd, ".applepi", "clarification"), { recursive: true });
+          writeFileSync(
+            join(input.cwd, ".applepi", "clarification", "request.json"),
+            JSON.stringify({
+              questions: [{ question: "Which direction?", choices: ["option one", "option two"] }],
+            }),
+          );
+        } else if (input.phase === "b1") {
+          writeFileSync(
+            join(input.cwd, ".applepi", "segments.json"),
+            JSON.stringify([
+              { instruction: "segment a instruction", commit_prefix: "applepi-task-2:" },
+              { instruction: "segment b instruction", commit_prefix: "applepi-task-5:" },
+            ]),
+          );
+        } else {
+          throw new Error("B2 throws before worker execution");
+        }
+        return { sessionName: `fake-${input.phase}` };
+      }
+      async wait(_worker: WorkerHandle): Promise<WorkerResult> {
+        return { ok: true, state: "completed", detail: "" };
+      }
+      async stopServer(): Promise<void> {}
+    }
+    const code = await runObjective(fixture, "non-sequential prefixes test", io, new FakeRuntime() as never);
+    expect(code).toBe(1);
+    const db = openDatabase(fixture);
+    const tasks = db.query("SELECT * FROM tasks").all() as Task[];
+    expect(tasks).toHaveLength(2);
+    expect(tasks.map((t) => t.instruction).sort()).toEqual([
+      "segment a instruction",
+      "segment b instruction",
+    ]);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});

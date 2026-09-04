@@ -48,7 +48,7 @@ HUMAN OBJECTIVE:
 ${objectiveText}
 
 The human answered your clarification: ${answersJson}.
-Finalize the bounded implementation direction from the human objective. Decompose the work into 1 to 4 smaller segments. Write .applepi/segments.json as JSON [{"instruction":"...","commit_prefix":"applepi-task-1:"},...] with unique prefixes applepi-task-<n>: (n starting at 1) and non-empty instructions. Do NOT spawn any worker subagents. Do NOT modify tracked files. Do NOT create any commits. End your turn after writing the file.`;
+Finalize the bounded implementation direction from the human objective. Decompose the work into 1 to 4 smaller segments. Write .applepi/segments.json as JSON [{"instruction":"...","commit_prefix":"applepi-task-1:"},...] with unique prefixes applepi-task-<n>: and non-empty instructions. Do NOT spawn any worker subagents. Do NOT modify tracked files. Do NOT create any commits. End your turn after writing the file.`;
 }
 
 /** Phase B2 execution-session instruction: run the persisted segments exactly as recorded. */
@@ -173,7 +173,7 @@ export async function runObjective(
   let branch: string | null = null;
   let taskIds: number[] = [];
   try {
-    // 1. Clean main, base commit, durable objective (running).
+    // 1. Clean base branch, base commit, durable objective (running).
     assertCleanMain(repoPath);
     const baseCommit = repoBaseCommit(repoPath);
     db = openDatabase(repoPath);

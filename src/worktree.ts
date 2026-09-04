@@ -40,4 +40,7 @@ export function assertCleanMain(repoPath: string): void {
   if (status !== "") {
     throw new Error(`main working tree is not clean: ${status}`);
   }
+  if (git(repoPath, ["rev-parse", "--abbrev-ref", "HEAD"]).trim() === "HEAD") {
+    throw new Error("expected a branch checkout, found detached HEAD");
+  }
 }

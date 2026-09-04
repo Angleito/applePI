@@ -1,8 +1,8 @@
-# CAO 2.5.0 + OMP 18.1.2 — verified invocation notes (Step 1, 2026-09-01)
+# CAO 2.5.0 + OMP 18.1.5 — verified invocation notes (Step 1, 2026-09-01)
 
 All shapes below were verified against the live `cao --help` / OpenAPI schema
-and 15+ real launches this session. CAO was patched for OMP 18.1.2 (see
-/tmp/applepi-smoke/cao-patches/README.md); post-fix 8/8 launches reached
+and 15+ real launches this session. CAO was patched for OMP 18.1.5 (see
+docs/cao-patches.md); post-fix 8/8 launches reached
 `completed`.
 
 ## Server

@@ -17,28 +17,27 @@ The real current flow:
    base commit, and asserts main is clean.
 2. ApplePI creates an isolated Git worktree at
    `.applepi/worktrees/objective-<id>` on branch `applepi/objective-<id>`.
-3. **Phase A** (executive session via CAO, profile
-   `applepi-executive-a.md`): the executive reads the repository and the
+3. **Phase A** (executive session via CAO, generated profile `.applepi/profiles/applepi-executive-a.md` (installed via `cao install --provider omp`)): the executive reads the repository and the
    human objective (authoritative), then writes a 1–3 question clarification
    request to `.applepi/clarification/request.json`. ApplePI validates it
    and asks the human (TTY or `APPLEPI_CLARIFY_ANSWER`); the answer is
-   stored in `.applepi/clarification/answer.json`.
-4. **Phase B1** (`applepi-executive-b1.md`): the executive finalizes the
+   stored in `.applepi/clarification/answer.json`. An empty answer resolves to "Proceed with your proposal."; a bare number picks that choice, anything else is taken as free text.
+4. **Phase B1** (generated profile `.applepi/profiles/applepi-executive-b1.md` (installed via `cao install --provider omp`)): the executive finalizes the
    bounded direction and decomposes it into 1–4 segments, writing
    `.applepi/segments.json`. No workers run in this phase.
 5. ApplePI validates the segments and persists one task row per segment
    (`pending` → `running`, with `worktree_path`) — durable before any
    execution, so a crash mid-run leaves an inspectable record.
-6. **Phase B2** (`applepi-executive-b2.md`): the executive executes exactly
+6. **Phase B2** (generated profile `.applepi/profiles/applepi-executive-b2.md` (installed via `cao install --provider omp`)): the executive executes exactly
    the persisted segments, spawning one worker subagent per segment that
    commits with an `applepi-task-<n>:` prefix.
 7. ApplePI moves tasks to `verifying` and runs the deterministic verifier
    (clean worktree, commits present, segment-prefix attribution,
    `bun install --frozen-lockfile`, `bun run check`).
 8. On PASS, ApplePI resolves each task's commit SHA (persisted for
-   diagnostics), then integrates via `integrateBranch`: `git merge --ff-only`
+   diagnostics), then integrates into the base branch (the branch checked out when the objective started; `main` in production) via `integrateBranch`: `git merge --ff-only`
    first, `git cherry-pick <base>..<branch>` as fallback, and
-   `git cherry-pick --abort` on conflict (main is left clean, never in an
+   `git cherry-pick --abort` on conflict (the base branch is left clean, never in an
    unresolved cherry-pick state).
 9. Tasks → `completed` and objective → `completed` only after integration
    succeeds; the worktree + branch are then removed. Any failure (executive
@@ -70,8 +69,7 @@ The real current flow:
 One Bun project per `docs/ROADMAP.md` §7: `src/` (factory, runtime,
 persistence, scheduling, worktrees, verification, repair, integration,
 tracing, evals), `tests/` (unit, integration, recovery, fixtures),
-`bench/harbor/` (evaluation harness), `docs/`. Only the v2 slice files
-exist so far.
+`bench/harbor/` (evaluation harness), `docs/`. Implemented so far: `src/` (`cao-runtime.ts`, `cli.ts`, `database.ts`, `factory.ts`, `integrate.ts`, `verifier.ts`, `worktree.ts`), `tests/` (`e2e`, `factory`, `integrate`, `smoke`, `verifier` + `work/` fixtures), `docs/` (`ARCHITECTURE.md`, `ROADMAP.md`, `cao-invocation.md`), `bench/harbor/demo.sh`.
 
 ## Pinned dependencies
 
@@ -81,7 +79,7 @@ Mandated by `docs/ROADMAP.md` §8.1. Do not build reproducibility around
 | Component | Role in v2 | Upstream | Release | Commit SHA | Install (deferred) | Status |
 |---|---|---|---|---|---|---|
 | CAO | process/session orchestration | awslabs/cli-agent-orchestrator | v2.5.0 (2026-08-28) | `a5ccbe2624aabadfbdf64642c5f1e364db299ec3` | `uv tool install git+https://github.com/awslabs/cli-agent-orchestrator.git@v2.5.0` (or PyPI `cli-agent-orchestrator==2.5.0`) | installed — used by the opt-in e2e (cao 2.5.0) |
-| OMP (Oh My Pi) | coding agent (workers) | can1357/oh-my-pi | v17.2.10 | `43c1b245e79f845c7ed7c692b79b4acd0f5c56af` | `curl -fsSL https://omp.sh/install \| sh` (or `bun install -g @oh-my-pi/pi-coding-agent`) | installed (18.1.2 on dev machine; pinned target 17.2.10 — note the drift) |
+| OMP (Oh My Pi) | coding agent (workers) | can1357/oh-my-pi | v18.1.5 | `2b8471bc33f2f4e10b187f02d19b54b48fd2191f` | `curl -fsSL https://omp.sh/install \| sh` (or `bun install -g @oh-my-pi/pi-coding-agent`) | installed — used by the opt-in e2e (omp 18.1.5) |
 | Harbor | evaluation harness | harbor-framework/harbor | v0.22.0 (2026-08-22) | `4407eb5227a2ff4f0d3f16b2eb48849382fdf276` (peeled commit of tag v0.22.0) | `uv tool install harbor==0.22.0` | installed — oracle demo PASS (2026-08-31), see below |
 
 Oracle demo (2026-08-31): **PASS** — 2/2 trials (reward 1.0 each, 0

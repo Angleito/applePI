@@ -44,7 +44,7 @@ The v2 execution flow:
    SQLite and captures the repo base commit.
 2. ApplePI creates an **isolated Git worktree** on branch `applepi/objective-<id>`.
 3. **Executive clarifies** (Phase A, via CAO): the human is in the loop and
-   is the authority for every decision; ApplePI fails rather than guess.
+   is the authority for every decision; ApplePI fails rather than guess. An empty answer resolves to "Proceed with your proposal."; a bare number picks that choice, anything else is taken as free text.
 4. **Executive decomposes** (Phase B1): writes `.applepi/segments.json`.
 5. ApplePI persists one **task row per segment** (`pending` → `running`) —
    durable before any execution starts, so a crash mid-run leaves a record.
@@ -52,10 +52,10 @@ The v2 execution flow:
    subagents run the repository checks and commit with
    `applepi-task-<n>:` prefixes.
 7. ApplePI marks tasks `verifying` and runs the **deterministic verifier**
-   (clean worktree, commits present, prefix attribution, `bun install`,
+   (clean worktree, commits present, prefix attribution, `bun install --frozen-lockfile`,
    `bun run check`).
-8. On PASS, ApplePI **integrates** the branch (fast-forward merge, with a
-   cherry-pick fallback; a failed integration is aborted, leaving main
+8. On PASS, ApplePI **integrates** into the base branch (the branch checked out when the objective started; `main` in production) (fast-forward merge, with a
+   cherry-pick fallback; a failed integration is aborted, leaving the base branch
    clean). Tasks and objective become `completed` only after integration
    succeeds; on any failure they become `failed` and the worktree + branch
    are retained for inspection.
